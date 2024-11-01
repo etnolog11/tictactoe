@@ -3,9 +3,9 @@ import random
 
 field = [0, 0, 0, 0, 0, 0, 0, 0, 0]
 step = 0
-typeofplay = 0
-game_in_progress = 0
-cross = 0
+typeofplay = False
+game_in_progress = False
+cross = False
 
 
 def ai_decision():  # must draw after itself
@@ -192,8 +192,8 @@ def sologameset():
     proai.place_forget()
     quest.config(text="")
     frame_for_quest.config(highlightbackground="#000000")
-    typeofplay = 0
-    game_in_progress = 1
+    typeofplay = False
+    game_in_progress = True
 
 
 def cross_handler():
@@ -202,8 +202,8 @@ def cross_handler():
     antiai.place_forget()
     quest.place_forget()
     frame_for_quest.place_forget()
-    cross = 1
-    game_in_progress = 1
+    cross = True
+    game_in_progress = True
 
 def circles_handler():
     global proai, antiai, quest, frame_for_quest, cross, game_in_progress
@@ -211,14 +211,14 @@ def circles_handler():
     antiai.place_forget()
     quest.place_forget()
     frame_for_quest.place_forget()
-    cross = 0
-    game_in_progress = 1
+    cross = False
+    game_in_progress = True
     ai_decision()
 
 
 def cross_or_circle():
     global proai, antiai, quest, typeofplay
-    typeofplay = 1
+    typeofplay = True
     quest.configure(text="What is your figure?")
     proai.configure(text="Crosses", command=cross_handler)
     antiai.configure(text="Circles", command=circles_handler)
@@ -247,8 +247,8 @@ def check(a):
 def logic(num):
     global field, game_in_progress, typeofplay, cross, step
     if field[num]==0:
-        if game_in_progress == 1:
-            if typeofplay == 0:  # game with friend
+        if game_in_progress:
+            if not typeofplay:  # game with friend
 
                 global step
                 if step % 2 == 0:
@@ -257,8 +257,8 @@ def logic(num):
                     field[num] = 2
                 draw()
                 step += 1
-            elif typeofplay == 1:
-                if (cross and step % 2 == 1) or ( cross==0 and step % 2 == 0) :  #TODO
+            else:
+                if (cross and step % 2 == 1) or ( cross==0 and step % 2 == 0) :
                     ai_decision()
 
                 else:
@@ -277,10 +277,10 @@ def logic(num):
 def restart_game():
     global a, quest, frame, game_in_progress, field, step, quest, frame_for_quest, antiai, proai, canvas, typeofplay, cross
     canvas.delete("transient")
-    typeofplay = 0
-    cross = 0
+    typeofplay = False
+    cross = False
     step = 0
-    game_in_progress = 0
+    game_in_progress = False
     field = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     frame_for_quest.config(highlightbackground="#ffffff")
     frame_for_quest.place(x=401, y=0)
