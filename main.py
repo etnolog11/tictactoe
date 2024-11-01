@@ -2,10 +2,129 @@ from tkinter import *
 import random
 
 field = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+#TODO restrtructure code make the global values obsolete
+
 step = 0
 typeofplay = False
 game_in_progress = False
 cross = False
+
+
+def parameter_for_best_move():
+    return not ((step) % 2 == 0 and not cross)
+
+
+def transpose(field):
+    transposed_field = [0] * 9
+    transpose_dictionary = {0: 2, 1: 5, 2: 8, 3: 1, 4: 4, 5: 7, 6: 0, 7: 3, 8: 6}
+    for i in range(0, 9):
+        transposed_field[transpose_dictionary[i]] = field[i]
+    return transposed_field
+
+
+def check_horizontal_diagonal(field):
+    full_diagonal = field[0] == field[4] == field[8]
+    cross_win = (full_diagonal and field[4] == 1)
+    cross_lose = (full_diagonal and field[4] == 2)
+    for i in range(0, 3):
+        full_horizontal = field[i * 3] == field[i * 3 + 1] == field[i * 3 + 2]
+        cross_win = cross_win or (full_horizontal and field[i * 3] == 1)
+        cross_lose = cross_lose or (full_horizontal and field[i * 3] == 2)
+
+    return [cross_win, cross_lose]
+
+#TODO connect win lose and tie condition to position_eval() function instead of check() function
+
+def position_eval(field):
+    circles = 0
+    crosses = 0
+    blank = 0
+    for square in field:
+        match square:
+            case 2:
+                circles += 1
+            case 1:
+                crosses += 1
+            case 0:
+                blank += 1
+            case _:
+                raise RuntimeError("The field was improperly constructed")
+    cross_win = False
+    cross_lose = False
+    this_transposition_check = check_horizontal_diagonal(field)
+    cross_win = cross_win or this_transposition_check[0]
+    cross_lose = cross_lose or this_transposition_check[1]
+    this_transposition_check = check_horizontal_diagonal(transpose(field))
+    cross_win = cross_win or this_transposition_check[0]
+    cross_lose = cross_lose or this_transposition_check[1]
+    free_spots = 9
+    for i in range(0, 9):
+        if (field[i] != 0):
+            free_spots -= 1
+
+    if cross_win and cross_lose:
+        raise RuntimeError("invalid field state")
+
+    if not (cross_win or cross_lose):
+        if free_spots > 0:
+            return 0
+        else:
+            return 2
+    elif cross_win:
+        return 3
+    elif cross_lose:
+        return 1
+    else:
+        raise ValueError("Winning state malfunction")
+
+
+def best_move(field_loc, cross):
+    #minmax algorithm implementation
+    #TODO try alpha beta prunning
+    #TODO try not calculating the symmetrical variants at least the most symmetrical ones
+    global field, step
+    local_field = field_loc.copy()
+    #print(local_field)
+    fill = 0
+    match cross:  # whose time to play 1 for crosses
+        case False:
+            fill = 1
+        case True:
+            fill = 2
+        case _:
+            raise RuntimeError("invalid current player")
+
+    # if endgame return result
+    evaluation = position_eval(local_field)
+    if evaluation != 0:
+        return evaluation
+
+    # generate valid moves
+    valid_move_indexes = []
+    for i in range(0, 9):
+        if local_field[i] == 0:
+            valid_move_indexes.append(i)
+    # find the best valid move recursively
+    moves_score = {}
+    for i in range(0, len(valid_move_indexes)):
+        new_local_field = local_field.copy()
+        new_local_field[valid_move_indexes[i]] = fill
+        moves_score.update([(valid_move_indexes[i], best_move(new_local_field, not cross))])
+
+    # optimize for the needed player
+    if cross:
+        final_choice_position = min(moves_score, key=moves_score.get)
+        final_choice_score = moves_score[final_choice_position]
+    else:
+        final_choice_position = max(moves_score, key=moves_score.get)
+        final_choice_score = moves_score[final_choice_position]
+
+    if local_field == field:
+        field[final_choice_position] = fill
+        step += 1
+        draw()
+        return final_choice_score
+    return final_choice_score
 
 
 def ai_decision():  # must draw after itself
@@ -150,10 +269,11 @@ def ai_decision():  # must draw after itself
     step += 1
     draw()
 
-
+#TODO either make draw function reset the field or draw only the new elements
 def draw():
     i = 0
     global typeofplay
+    #print("I drew" + str(field))
     for tile in field:
         if tile == 1:
             canvas.create_line(133 * (i % 3), (i // 3) * 133, 133 * (i % 3 + 1), (i // 3 + 1) * 133, fill="#ffffff"
@@ -165,13 +285,11 @@ def draw():
                                , tags='transient')
         i += 1
     if check(field) != 0:
-        global frame
-        global a
         global game_in_progress
         a.config(fg="#ffffff")
         frame.place(x=401, y=0)
         frame.config(highlightbackground="#ffffff")
-        game_in_progress = 0
+        game_in_progress = False
     if check(field) == 0:
         pass
     elif check(field) == 1:
@@ -195,7 +313,7 @@ def sologameset():
     typeofplay = False
     game_in_progress = True
 
-
+# TODO make this abomination of three function be one function
 def cross_handler():
     global proai, antiai, quest, frame_for_quest, cross, game_in_progress
     proai.place_forget()
@@ -205,6 +323,7 @@ def cross_handler():
     cross = True
     game_in_progress = True
 
+
 def circles_handler():
     global proai, antiai, quest, frame_for_quest, cross, game_in_progress
     proai.place_forget()
@@ -213,7 +332,8 @@ def circles_handler():
     frame_for_quest.place_forget()
     cross = False
     game_in_progress = True
-    ai_decision()
+    # ai_decision()
+    best_move(field, parameter_for_best_move())
 
 
 def cross_or_circle():
@@ -246,32 +366,24 @@ def check(a):
 
 def logic(num):
     global field, game_in_progress, typeofplay, cross, step
-    if field[num]==0:
+    if field[num] == 0:
         if game_in_progress:
             if not typeofplay:  # game with friend
-
-                global step
                 if step % 2 == 0:
                     field[num] = 1
                 else:
                     field[num] = 2
                 draw()
                 step += 1
-            else:
-                if (cross and step % 2 == 1) or ( cross==0 and step % 2 == 0) :
-                    ai_decision()
-
-                else:
-
-                    if (step % 2 == 0 and cross) or (step%2!=0 and  cross == 0) :
-                        if cross:
-                            field[num] = 1
-                        else:
-                            field[num] = 2
-                        draw()
-                        step += 1
-                        if check(field)==0:
-                           ai_decision()
+            else: #game with AI
+                    if cross:
+                        field[num] = 1
+                    else:
+                        field[num] = 2
+                    draw()
+                    step += 1
+                    if check(field) == 0:
+                        best_move(field, parameter_for_best_move())
 
 
 def restart_game():
@@ -310,7 +422,7 @@ def coords_of_click(event):
         num = x + y * 3
         logic(num)
 
-
+#TODO if __name__ == main please
 # basic graphic setup
 root = Tk()
 root.title("TicTacToe")
