@@ -15,7 +15,7 @@ if __name__ == "__main__":
     field_canvas.place(x=0, y=0)
     specific_ui_canvas = Canvas(root, bg=normal_colors["background"], height=int(frame_height * 0.75),
                                 width=int(frame_width / 2))
-    specific_ui_canvas = specific_ui_canvas.place(x=int(frame_width / 2 + 1), y=0)
+    specific_ui_canvas.place(x=int(frame_width / 2 + 1), y=0)
     general_ui_canvas = Canvas(root, bg=normal_colors["background"], height=int(frame_height / 4),
                                width=int(frame_width / 2))
     general_ui_canvas.place(x=int(frame_width / 2 + 1), y=int(frame_height * 0.75 + 1))
